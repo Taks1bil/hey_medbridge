@@ -2,24 +2,39 @@ import streamlit as st
 from streamlit_lottie import st_lottie
 import requests
 from medbridge_chatbot import MedBridgeChatbot
-import pyttsx3
-import tempfile
 import os
 
 # --- Detect Streamlit Cloud environment ---
 is_cloud = os.getenv("STREAMLIT_CLOUD", "") == "true"
 
-# --- Initialize pyttsx3 TTS engine only if not on cloud ---
-if not is_cloud:
-    engine = pyttsx3.init()
-    engine.setProperty('rate', 150)  # Speed of speech
-    engine.setProperty('volume', 1)  # Volume 0-1
+# --- Sidebar options ---
+st.sidebar.title("Settings")
+if is_cloud:
+    use_local_tts = False
+    st.sidebar.info("Local TTS disabled on Streamlit Cloud. Using browser TTS instead.")
+else:
+    use_local_tts = st.sidebar.checkbox("Use local TTS (pyttsx3) instead of browser TTS", value=False)
+show_3d_avatar = st.sidebar.checkbox("Show external 3D avatar (iframe)", value=False)
+
+# --- Lazy pyttsx3 engine initialization ---
+engine = None
+
+def get_engine():
+    global engine
+    if engine is None:
+        import pyttsx3
+        eng = pyttsx3.init()
+        eng.setProperty('rate', 150)  # Speed of speech
+        eng.setProperty('volume', 1)  # Volume 0-1
+        engine = eng
+    return engine
 
 def synthesize_speech(text):
-    """Generate a temporary audio file from text and return its path."""
+    import tempfile
+    eng = get_engine()
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-        engine.save_to_file(text, tmp_file.name)
-        engine.runAndWait()
+        eng.save_to_file(text, tmp_file.name)
+        eng.runAndWait()
         return tmp_file.name
 
 # --- Page config ---
@@ -83,15 +98,6 @@ def load_lottie_url(url: str):
 
 lottie_robot = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_gptgkzpu.json")
 
-# --- Sidebar options ---
-st.sidebar.title("Settings")
-if is_cloud:
-    use_local_tts = False
-    st.sidebar.info("Local TTS disabled on Streamlit Cloud. Using browser TTS instead.")
-else:
-    use_local_tts = st.sidebar.checkbox("Use local TTS (pyttsx3) instead of browser TTS", value=False)
-show_3d_avatar = st.sidebar.checkbox("Show external 3D avatar (iframe)", value=False)
-
 # --- Avatar display ---
 with st.container():
     if show_3d_avatar:
@@ -138,13 +144,12 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
             if use_local_tts:
-                # Local TTS: generate audio file and play it
                 audio_path = synthesize_speech(msg["content"])
-                audio_bytes = open(audio_path, "rb").read()
+                with open(audio_path, "rb") as f:
+                    audio_bytes = f.read()
                 st.audio(audio_bytes, format="audio/mp3")
                 os.remove(audio_path)  # clean up temp file
             else:
-                # Browser TTS
                 st.markdown(f"<script>speak({repr(msg['content'])})</script>", unsafe_allow_html=True)
 
 # --- Chat input ---
@@ -159,7 +164,8 @@ if prompt := st.chat_input("What can I help you with?"):
         st.markdown(response)
         if use_local_tts:
             audio_path = synthesize_speech(response)
-            audio_bytes = open(audio_path, "rb").read()
+            with open(audio_path, "rb") as f:
+                audio_bytes = f.read()
             st.audio(audio_bytes, format="audio/mp3")
             os.remove(audio_path)
         else:
