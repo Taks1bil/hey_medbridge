@@ -1,7 +1,11 @@
 Flask
 
-
-
 streamlit
+streamlit_lottie
+requests
+pyttsx3
+
+
+
 
 
