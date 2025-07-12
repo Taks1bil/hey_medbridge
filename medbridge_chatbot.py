@@ -1,6 +1,6 @@
 import random
 import os
-from openai import OpenAI
+import subprocess
 
 class MedBridgeChatbot:
     def __init__(self, use_gpt_fallback=False):
@@ -24,13 +24,6 @@ class MedBridgeChatbot:
         self.medical_keywords = ["headache", "fever", "malaria", "cold", "symptoms"]
         self.use_gpt_fallback = use_gpt_fallback
 
-        # Setup OpenAI GPT client if fallback is enabled
-        if self.use_gpt_fallback:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("❌ OPENAI_API_KEY environment variable is not set.")
-            self.client = OpenAI(api_key=api_key)
-
     def get_response(self, user_input):
         user_input_lower = user_input.lower().strip()
 
@@ -48,7 +41,7 @@ class MedBridgeChatbot:
         if "symptoms" in user_input_lower or any(k in user_input_lower for k in self.medical_keywords):
             return self._handle_symptoms(user_input_lower)
 
-        # If no match above and fallback enabled, ask GPT
+        # If no match above and fallback enabled, ask GPT (Ollama)
         if self.use_gpt_fallback:
             return self._ask_gpt(user_input)
 
@@ -79,26 +72,13 @@ class MedBridgeChatbot:
 
     def _ask_gpt(self, prompt):
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful medical assistant."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=300,
-                temperature=0.7,
+            # Call ollama CLI with prompt; replace 'llama2' with your model name if different
+            proc = subprocess.run(
+                ["ollama", "query", "llama2", prompt],
+                capture_output=True,
+                text=True,
+                check=True
             )
-            return response.choices[0].message.content.strip()
+            return proc.stdout.strip()
         except Exception as e:
-            return f"❌ Sorry, I couldn't reach the AI service. Error: {e}"
-
-# CLI test example (optional)
-if __name__ == "__main__":
-    bot = MedBridgeChatbot(use_gpt_fallback=True)
-    print("🤖 MedBridge AI is online. Ask me anything! Type 'exit' to quit.")
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() in ["exit", "quit"]:
-            print("👋 Take care!")
-            break
-        print("MedBridge:", bot.get_response(user_input))
+            return f"❌ Sorry, couldn't reach Ollama. Error: {e}"
