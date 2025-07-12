@@ -87,13 +87,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Lottie loader ---
+# --- Lottie loader with debug info ---
 def load_lottie_url(url: str):
     try:
         r = requests.get(url)
         if r.status_code == 200:
             return r.json()
-    except:
+        else:
+            print(f"Lottie load failed, status code: {r.status_code}")
+            return None
+    except Exception as e:
+        print(f"Lottie load error: {e}")
         return None
 
 lottie_robot = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_gptgkzpu.json")
@@ -110,7 +114,10 @@ with st.container():
             unsafe_allow_html=True
         )
     else:
-        st_lottie(lottie_robot, height=200, key="robot", speed=1)
+        if lottie_robot:
+            st_lottie(lottie_robot, height=200, key="robot", speed=1)
+        else:
+            st.write("🤖 [Animation failed to load]")
 
 # --- JavaScript Browser TTS ---
 if not use_local_tts:
