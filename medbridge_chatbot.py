@@ -4,6 +4,7 @@ from openai import OpenAI
 
 class MedBridgeChatbot:
     def __init__(self, use_gpt_fallback=False):
+        # Predefined answers for common health questions
         self.knowledge_base = {
             "headache": "Headaches can be caused by stress, dehydration, or lack of sleep. If your headache is severe or comes with other symptoms, please see a doctor.",
             "fever": "Fever is your body's way of fighting infection. Rest, stay hydrated, and monitor your temperature. If it persists, consult a healthcare professional.",
@@ -19,21 +20,22 @@ class MedBridgeChatbot:
             ]),
             "how are you": "I'm just lines of code, but I'm fully charged and ready to help you stay healthy!"
         }
-        self.medical_keywords = ["headache", "fever", "malaria", "cold", "symptoms"]
 
+        self.medical_keywords = ["headache", "fever", "malaria", "cold", "symptoms"]
         self.use_gpt_fallback = use_gpt_fallback
+
+        # Setup OpenAI GPT client if fallback is enabled
         if self.use_gpt_fallback:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise ValueError("OPENAI_API_KEY environment variable not set")
+                raise ValueError("❌ OPENAI_API_KEY environment variable is not set.")
             self.client = OpenAI(api_key=api_key)
 
     def get_response(self, user_input):
         user_input_lower = user_input.lower().strip()
 
-        # Try local knowledge base first
-        # Greetings and small talk
-        if any(greet in user_input_lower for greet in ["hi", "hello", "hey"]):
+        # Check for greetings and common phrases in user input
+        if any(word in user_input_lower for word in ["hi", "hello", "hey"]):
             return self.knowledge_base["hi"]
         elif "how are you" in user_input_lower:
             return self.knowledge_base["how are you"]
@@ -42,37 +44,40 @@ class MedBridgeChatbot:
         elif "what is medbridge" in user_input_lower or "medbridge ai" in user_input_lower:
             return self.knowledge_base["medbridge ai"]
 
-        # Symptom check
+        # If user asks about symptoms or mentions medical keywords
         if "symptoms" in user_input_lower or any(k in user_input_lower for k in self.medical_keywords):
             return self._handle_symptoms(user_input_lower)
 
-        # Fallback to GPT if enabled
+        # If no match above and fallback enabled, ask GPT
         if self.use_gpt_fallback:
-            return self._get_gpt_response(user_input)
+            return self._ask_gpt(user_input)
 
-        # Default fallback response
-        return "🤖 Hmm... I’m not sure how to help with that. Try asking about symptoms like 'fever' or type 'help' to see what I can do."
+        # Default response if nothing matched
+        return "🤖 I'm not sure how to help with that. Try asking about symptoms like 'fever', or type 'help'."
 
-    def _handle_symptoms(self, user_input):
-        response_parts = []
-        matched = False
+    def _handle_symptoms(self, user_input_lower):
+        responses = []
+        found = False
 
+        # Look for known medical keywords in input
         for keyword in self.medical_keywords:
-            if keyword in user_input and keyword != "symptoms":
-                response_parts.append(self.knowledge_base.get(keyword))
-                matched = True
+            if keyword in user_input_lower and keyword != "symptoms":
+                responses.append(self.knowledge_base[keyword])
+                found = True
 
-        if not matched:
-            response_parts.append(self.knowledge_base["symptoms"])
+        # If no specific keywords found, ask for more details
+        if not found:
+            responses.append(self.knowledge_base["symptoms"])
 
-        if any(word in user_input for word in ["severe", "emergency", "worsening", "can't breathe", "bleeding"]):
-            response_parts.append("\n\n🚨 This sounds serious. Please visit a clinic or call emergency services right away.")
-        elif matched:
-            response_parts.append("\n\n🔎 Please note, I’m not a doctor. Always consult a qualified healthcare provider for a diagnosis.")
+        # Warn if serious symptoms are mentioned
+        if any(word in user_input_lower for word in ["severe", "emergency", "worsening", "can't breathe", "bleeding"]):
+            responses.append("\n\n🚨 This sounds serious. Please visit a clinic or call emergency services.")
+        elif found:
+            responses.append("\n\n🔎 Note: I'm not a doctor. Always check with a qualified health provider.")
 
-        return " ".join(response_parts).strip()
+        return " ".join(responses).strip()
 
-    def _get_gpt_response(self, prompt):
+    def _ask_gpt(self, prompt):
         try:
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -85,16 +90,15 @@ class MedBridgeChatbot:
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
-            # fallback error message
-            return f"🤖 Sorry, I couldn't get a response from the AI service. Error: {e}"
+            return f"❌ Sorry, I couldn't reach the AI service. Error: {e}"
 
-# Local test (CLI use only)
+# CLI test example (optional)
 if __name__ == "__main__":
     bot = MedBridgeChatbot(use_gpt_fallback=True)
-    print("🤖 MedBridge AI is online. Ask me about your symptoms. Type 'exit' to leave.")
+    print("🤖 MedBridge AI is online. Ask me anything! Type 'exit' to quit.")
     while True:
-        msg = input("You: ")
-        if msg.lower() in ["exit", "quit"]:
-            print("MedBridge: Take care! 👋")
+        user_input = input("You: ")
+        if user_input.lower() in ["exit", "quit"]:
+            print("👋 Take care!")
             break
-        print("MedBridge:", bot.get_response(msg))
+        print("MedBridge:", bot.get_response(user_input))

@@ -3,6 +3,12 @@ from streamlit_lottie import st_lottie
 import requests
 from medbridge_chatbot import MedBridgeChatbot
 import os
+import tempfile
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # --- Detect Streamlit Cloud environment ---
 is_cloud = os.getenv("STREAMLIT_CLOUD", "") == "true"
@@ -13,24 +19,22 @@ if is_cloud:
     use_local_tts = False
     st.sidebar.info("Local TTS disabled on Streamlit Cloud. Using browser TTS instead.")
 else:
-    use_local_tts = st.sidebar.checkbox("Use local TTS (pyttsx3) instead of browser TTS", value=False)
-show_3d_avatar = st.sidebar.checkbox("Show external 3D avatar (iframe)", value=False)
+    use_local_tts = st.sidebar.checkbox("Use local TTS (pyttsx3)", value=False)
+show_3d_avatar = st.sidebar.checkbox("Show external 3D avatar", value=False)
 
 # --- Lazy pyttsx3 engine initialization ---
 engine = None
-
 def get_engine():
     global engine
     if engine is None:
         import pyttsx3
         eng = pyttsx3.init()
-        eng.setProperty('rate', 150)  # Speed of speech
-        eng.setProperty('volume', 1)  # Volume 0-1
+        eng.setProperty('rate', 150)
+        eng.setProperty('volume', 1)
         engine = eng
     return engine
 
 def synthesize_speech(text):
-    import tempfile
     eng = get_engine()
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
         eng.save_to_file(text, tmp_file.name)
@@ -41,8 +45,7 @@ def synthesize_speech(text):
 st.set_page_config(
     page_title="MedBridge AI Chatbot",
     page_icon=":robot_face:",
-    layout="centered",
-    initial_sidebar_state="auto",
+    layout="centered"
 )
 
 # --- CSS Styling ---
@@ -65,62 +68,32 @@ st.markdown("""
         color: #64ffda;
         text-shadow: 0px 0px 10px rgba(100, 255, 218, 0.5);
     }
-    .st-emotion-cache-13ln4jo {
-        background-color: #0a192f;
-    }
-    .st-emotion-cache-1r6y40v {
-        background-color: #0066CC;
-        color: #ffffff;
-        border-radius: 15px;
-        padding: 10px 15px;
-        margin-bottom: 10px;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-    }
-    .st-emotion-cache-1y4pmz5 {
-        background-color: #00A896;
-        color: #ffffff;
-        border-radius: 15px;
-        padding: 10px 15px;
-        margin-bottom: 10px;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- Lottie loader ---
-def load_lottie_url(url: str):
+# --- Load Lottie animation ---
+def load_lottie_url(url):
     try:
         r = requests.get(url)
         if r.status_code == 200:
             return r.json()
-        else:
-            print(f"Lottie load failed, status code: {r.status_code}")
-            return None
-    except Exception as e:
-        print(f"Lottie load error: {e}")
-        return None
+    except:
+        pass
+    return None
 
-# <-- UPDATED RELIABLE LOTTIE URL -->
 lottie_robot = load_lottie_url("https://assets7.lottiefiles.com/packages/lf20_touohxv0.json")
 
-# --- Avatar display ---
+# --- Avatar or animation ---
 with st.container():
     if show_3d_avatar:
-        # External 3D avatar iframe (example Ready Player Me)
-        st.markdown(
-            """
-            <iframe src="https://readyplayer.me/avatar/your-avatar-url" 
+        st.markdown("""
+            <iframe src="https://readyplayer.me/avatar/your-avatar-url"
             width="300" height="400" frameborder="0" allowfullscreen></iframe>
-            """, 
-            unsafe_allow_html=True
-        )
-    else:
-        if lottie_robot:
-            st_lottie(lottie_robot, height=200, key="robot", speed=1)
-        else:
-            st.write("🤖 [Animation failed to load]")
+        """, unsafe_allow_html=True)
+    elif lottie_robot:
+        st_lottie(lottie_robot, height=200, key="robot")
 
-# --- JavaScript Browser TTS ---
+# --- JavaScript TTS for browsers ---
 if not use_local_tts:
     st.markdown("""
     <script>
@@ -135,18 +108,17 @@ if not use_local_tts:
     </script>
     """, unsafe_allow_html=True)
 
-# --- Initialize chatbot & chat history ---
-if 'chatbot' not in st.session_state:
-    st.session_state.chatbot = MedBridgeChatbot()
+# --- Initialize chatbot with GPT fallback ---
+if "chatbot" not in st.session_state:
+    st.session_state.chatbot = MedBridgeChatbot(use_gpt_fallback=True)
 
-if 'messages' not in st.session_state:
-    st.session_state.messages = []
-    st.session_state.messages.append({
+if "messages" not in st.session_state:
+    st.session_state.messages = [{
         "role": "assistant",
         "content": "Hello! I am MedBridge AI, your personal health assistant. How can I help you today?"
-    })
+    }]
 
-# --- Display chat messages ---
+# --- Display message history ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -154,13 +126,12 @@ for msg in st.session_state.messages:
             if use_local_tts:
                 audio_path = synthesize_speech(msg["content"])
                 with open(audio_path, "rb") as f:
-                    audio_bytes = f.read()
-                st.audio(audio_bytes, format="audio/mp3")
-                os.remove(audio_path)  # clean up temp file
+                    st.audio(f.read(), format="audio/mp3")
+                os.remove(audio_path)
             else:
                 st.markdown(f"<script>speak({repr(msg['content'])})</script>", unsafe_allow_html=True)
 
-# --- Chat input ---
+# --- Input and response ---
 if prompt := st.chat_input("What can I help you with?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -173,17 +144,14 @@ if prompt := st.chat_input("What can I help you with?"):
         if use_local_tts:
             audio_path = synthesize_speech(response)
             with open(audio_path, "rb") as f:
-                audio_bytes = f.read()
-            st.audio(audio_bytes, format="audio/mp3")
+                st.audio(f.read(), format="audio/mp3")
             os.remove(audio_path)
         else:
             st.markdown(f"<script>speak({repr(response)})</script>", unsafe_allow_html=True)
 
-# --- Download chat history as text ---
+# --- Download chat log ---
 if st.sidebar.button("Download chat history"):
-    chat_text = "\n\n".join(
-        [f"{msg['role'].capitalize()}: {msg['content']}" for msg in st.session_state.messages]
-    )
+    chat_text = "\n\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in st.session_state.messages])
     st.sidebar.download_button(
         label="Download as .txt",
         data=chat_text,
