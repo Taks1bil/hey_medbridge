@@ -12,63 +12,63 @@ st.set_page_config(
 # Custom CSS for a modern, AI-centric dark theme
 st.markdown("""
 <style>
-    .stApp { /* Main app container */
-        background-color: #0a192f; /* Dark blue background */
-        color: #ccd6f6; /* Light gray text */
-    }
-    .st-emotion-cache-10qaj7l { /* Header/Title area */
+    .stApp {
         background-color: #0a192f;
-        color: #64ffda; /* Teal for title */
+        color: #ccd6f6;
+    }
+    .st-emotion-cache-10qaj7l {
+        background-color: #0a192f;
+        color: #64ffda;
         font-family: 'Montserrat', sans-serif;
         font-weight: 700;
         text-align: center;
         padding-top: 20px;
         padding-bottom: 20px;
     }
-    .st-emotion-cache-10qaj7l h1 { /* Title text */
+    .st-emotion-cache-10qaj7l h1 {
         color: #64ffda;
         text-shadow: 0px 0px 10px rgba(100, 255, 218, 0.5);
     }
-    .st-emotion-cache-10qaj7l p { /* Subtitle text */
+    .st-emotion-cache-10qaj7l p {
         color: #8892b0;
     }
-    .st-emotion-cache-13ln4jo { /* Chat message container */
+    .st-emotion-cache-13ln4jo {
         background-color: #0a192f;
     }
-    .st-emotion-cache-1r6y40v { /* User message bubble */
-        background-color: #0066CC; /* Darker blue for user */
+    .st-emotion-cache-1r6y40v {
+        background-color: #0066CC;
         color: #ffffff;
         border-radius: 15px;
         padding: 10px 15px;
         margin-bottom: 10px;
         box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
     }
-    .st-emotion-cache-1y4pmz5 { /* Assistant message bubble */
-        background-color: #00A896; /* Teal for assistant */
+    .st-emotion-cache-1y4pmz5 {
+        background-color: #00A896;
         color: #ffffff;
         border-radius: 15px;
         padding: 10px 15px;
         margin-bottom: 10px;
         box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
     }
-    .st-emotion-cache-1c7y2o9 { /* Chat input container */
+    .st-emotion-cache-1c7y2o9 {
         background-color: #0a192f;
         border-top: 1px solid #1a3054;
         padding-top: 15px;
     }
-    .st-emotion-cache-vj1c9o { /* Chat input text area */
+    .st-emotion-cache-vj1c9o {
         background-color: #1a3054;
         color: #ccd6f6;
         border: 1px solid #0066CC;
         border-radius: 10px;
         padding: 10px;
     }
-    .st-emotion-cache-vj1c9o:focus { /* Chat input focus */
+    .st-emotion-cache-vj1c9o:focus {
         border-color: #64ffda;
         box-shadow: 0px 0px 8px rgba(100, 255, 218, 0.5);
     }
-    .st-emotion-cache-10qaj7l button { /* Send button */
-        background-color: #F26419; /* Orange accent */
+    .st-emotion-cache-10qaj7l button {
+        background-color: #F26419;
         color: white;
         border-radius: 10px;
         padding: 10px 20px;
@@ -78,14 +78,28 @@ st.markdown("""
     .st-emotion-cache-10qaj7l button:hover {
         background-color: #e05c15;
     }
-    .st-emotion-cache-10qaj7l .st-emotion-cache-1v0mbvd { /* Chat message avatar */
-        color: #64ffda;
-    }
-    .st-emotion-cache-10qaj7l .st-emotion-cache-1v0mbvd img { /* Chat message avatar image */
-        border-radius: 50%;
-        border: 2px solid #64ffda;
-    }
 </style>
+""", unsafe_allow_html=True)
+
+# 🧠 Add an avatar above the title
+st.markdown("""
+<div style='text-align:center; margin-top: -20px;'>
+    <img src='https://media.giphy.com/media/LPjWFH7HDtvkk/giphy.gif' width='160'/>
+</div>
+""", unsafe_allow_html=True)
+
+# 🗣️ Add text-to-speech JavaScript
+st.markdown("""
+<script>
+function speak(text) {
+    const synth = window.speechSynthesis;
+    const utterThis = new SpeechSynthesisUtterance(text);
+    utterThis.lang = 'en-US';
+    utterThis.pitch = 1;
+    utterThis.rate = 1;
+    synth.speak(utterThis);
+}
+</script>
 """, unsafe_allow_html=True)
 
 # Initialize the chatbot
@@ -95,27 +109,28 @@ if 'chatbot' not in st.session_state:
 # Initialize chat history
 if 'messages' not in st.session_state:
     st.session_state.messages = []
-    # Add initial greeting from the bot
-    st.session_state.messages.append({"role": "assistant", "content": "Hello! I am MedBridge AI, your personal health assistant. How can I help you today?"})
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": "Hello! I am MedBridge AI, your personal health assistant. How can I help you today?"
+    })
 
-# Display chat messages from history on app rerun
+# Display past messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        if message["role"] == "assistant":
+            st.markdown(f"<script>speak({repr(message['content'])})</script>", unsafe_allow_html=True)
 
 # Accept user input
 if prompt := st.chat_input("What can I help you with?"):
-    # Add user message to chat history
+    # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
-    # Display user message in chat message container
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Get bot response
-    with st.chat_message("assistant"):
-        response = st.session_state.chatbot.get_response(prompt)
-        st.markdown(response)
-    # Add bot response to chat history
+    # Generate and display bot response
+    response = st.session_state.chatbot.get_response(prompt)
     st.session_state.messages.append({"role": "assistant", "content": response})
-
-
+    with st.chat_message("assistant"):
+        st.markdown(response)
+        st.markdown(f"<script>speak({repr(response)})</script>", unsafe_allow_html=True)
