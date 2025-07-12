@@ -1,64 +1,71 @@
+import random
 
 class MedBridgeChatbot:
     def __init__(self):
         self.knowledge_base = {
-            "headache": "Headaches can be caused by stress, dehydration, or lack of sleep. If your headache is severe, persistent, or accompanied by other symptoms like fever or vision changes, please consult a doctor immediately.",
-            "fever": "Fever is often a sign that your body is fighting an infection. Rest, drink plenty of fluids, and consider fever-reducing medication if needed. If your fever is very high, lasts for more than a few days, or is accompanied by severe symptoms, seek medical attention.",
-            "malaria": "Malaria is a serious disease caused by a parasite spread by mosquitoes. Symptoms include fever, chills, and flu-like illness. It is preventable and curable. If you suspect you have malaria, please seek medical attention for proper diagnosis and treatment.",
-            "cold": "The common cold is a viral infection of your nose and throat. Symptoms usually include a runny nose, sore throat, cough, and congestion. Rest, fluids, and over-the-counter remedies can help. It usually resolves within a week or two.",
-            "medbridge ai": "MedBridge AI is an artificial intelligence-powered platform designed to improve healthcare accessibility in emerging markets. We provide preliminary health information and guidance through a simple chat interface, helping connect people to the care they need.",
-            "symptoms": "Please describe your symptoms in more detail. For example, 'I have a cough and a sore throat.'",
-            "help": "I can help you with basic health information, answer questions about common symptoms, or tell you more about MedBridge AI. What would you like to know?",
-            "hi": "Hello! I am MedBridge AI, your personal health assistant. How can I help you today? You can tell me about your symptoms, ask for general health information, or learn more about MedBridge AI.",
-            "hello": "Hello! I am MedBridge AI, your personal health assistant. How can I help you today? You can tell me about your symptoms, ask for general health information, or learn more about MedBridge AI.",
-            "how are you": "I am an AI, so I don't have feelings, but I'm ready to assist you! How can I help you with your health today?"
+            "headache": "Headaches can be caused by stress, dehydration, or lack of sleep. If your headache is severe or comes with other symptoms, please see a doctor.",
+            "fever": "Fever is your body's way of fighting infection. Rest, stay hydrated, and monitor your temperature. If it persists, consult a healthcare professional.",
+            "malaria": "Malaria is a serious disease transmitted by mosquitoes. Symptoms include fever, chills, and body aches. Please get tested and treated immediately.",
+            "cold": "The common cold often brings sneezing, coughing, and a sore throat. Rest, hydrate, and it should clear within a week or so.",
+            "medbridge ai": "MedBridge AI is your virtual health assistant, offering early guidance on health concerns and helping you know when to seek care.",
+            "symptoms": "Tell me more about how you're feeling. What symptoms do you have?",
+            "help": "I can answer basic health questions or provide guidance on symptoms. Just type what you're experiencing!",
+            "hi": random.choice([
+                "Hi there! 😊 How can I help you today?",
+                "Hello! I'm here to support your health questions.",
+                "Hey! 👋 What can I assist you with today?"
+            ]),
+            "how are you": "I'm just lines of code, but I'm fully charged and ready to help you stay healthy!"
         }
         self.medical_keywords = ["headache", "fever", "malaria", "cold", "symptoms"]
 
     def get_response(self, user_input):
-        user_input = user_input.lower()
+        user_input = user_input.lower().strip()
 
-        if "symptoms" in user_input or any(keyword in user_input for keyword in self.medical_keywords):
-            return self._handle_symptoms(user_input)
-        elif "medbridge ai" in user_input or "what is medbridge ai" in user_input:
-            return self.knowledge_base["medbridge ai"]
-        elif "hello" in user_input or "hi" in user_input:
-            return self.knowledge_base["hello"]
+        # Greetings and small talk
+        if any(greet in user_input for greet in ["hi", "hello", "hey"]):
+            return self.knowledge_base["hi"]
         elif "how are you" in user_input:
             return self.knowledge_base["how are you"]
         elif "help" in user_input:
             return self.knowledge_base["help"]
-        else:
-            return "I'm not sure how to respond to that. Can you rephrase your question or ask about a specific symptom or health topic?"
+        elif "what is medbridge" in user_input or "medbridge ai" in user_input:
+            return self.knowledge_base["medbridge ai"]
+
+        # Symptom check
+        if "symptoms" in user_input or any(k in user_input for k in self.medical_keywords):
+            return self._handle_symptoms(user_input)
+
+        # Fallback
+        return "🤖 Hmm... I’m not sure how to help with that. Try asking about symptoms like 'fever' or type 'help' to see what I can do."
 
     def _handle_symptoms(self, user_input):
-        response = []
-        found_symptom = False
+        response_parts = []
+        matched = False
+
         for keyword in self.medical_keywords:
             if keyword in user_input and keyword != "symptoms":
-                response.append(self.knowledge_base.get(keyword, ""))
-                found_symptom = True
-        
-        if not found_symptom:
-            response.append(self.knowledge_base["symptoms"])
+                response_parts.append(self.knowledge_base.get(keyword))
+                matched = True
 
-        if "severe" in user_input or "persistent" in user_input or "worse" in user_input or "emergency" in user_input:
-            response.append("\n\nImportant: Your symptoms sound concerning. Please seek immediate medical attention from a qualified healthcare professional or visit the nearest clinic.")
-        elif found_symptom:
-            response.append("\n\nRemember, I am an AI and cannot provide a diagnosis. Always consult a healthcare professional for accurate medical advice.")
+        if not matched:
+            response_parts.append(self.knowledge_base["symptoms"])
 
-        return " ".join(response).strip()
+        if any(word in user_input for word in ["severe", "emergency", "worsening", "can't breathe", "bleeding"]):
+            response_parts.append("\n\n🚨 This sounds serious. Please visit a clinic or call emergency services right away.")
+        elif matched:
+            response_parts.append("\n\n🔎 Please note, I’m not a doctor. Always consult a qualified healthcare provider for a diagnosis.")
+
+        return " ".join(response_parts).strip()
 
 
+# Local test (for CLI use only)
 if __name__ == "__main__":
-    chatbot = MedBridgeChatbot()
-    print("MedBridge AI Chatbot: Hello! I am MedBridge AI, your personal health assistant. How can I help you today? Type 'exit' to end the conversation.")
+    bot = MedBridgeChatbot()
+    print("🤖 MedBridge AI is online. Ask me about your symptoms. Type 'exit' to leave.")
     while True:
-        user_input = input("You: ")
-        if user_input.lower() == 'exit':
-            print("MedBridge AI Chatbot: Goodbye! Stay healthy.")
+        msg = input("You: ")
+        if msg.lower() in ["exit", "quit"]:
+            print("MedBridge: Take care! 👋")
             break
-        response = chatbot.get_response(user_input)
-        print(f"MedBridge AI Chatbot: {response}")
-
-
+        print("MedBridge:", bot.get_response(msg))
