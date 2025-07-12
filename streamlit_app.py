@@ -81,12 +81,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 🧠 Add an avatar above the title
 st.markdown("""
-<div style='text-align:center; margin-top: -20px;'>
-    <img src='https://media.giphy.com/media/LPjWFH7HDtvkk/giphy.gif' width='160'/>
+<div style="text-align:center">
+    <img src="https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif" alt="AI Avatar" width="200"/>
 </div>
 """, unsafe_allow_html=True)
+
 
 # 🗣️ Add text-to-speech JavaScript
 st.markdown("""
