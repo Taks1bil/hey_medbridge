@@ -87,7 +87,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Lottie loader with debug info ---
+# --- Lottie loader ---
 def load_lottie_url(url: str):
     try:
         r = requests.get(url)
@@ -100,7 +100,8 @@ def load_lottie_url(url: str):
         print(f"Lottie load error: {e}")
         return None
 
-lottie_robot = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_gptgkzpu.json")
+# <-- UPDATED RELIABLE LOTTIE URL -->
+lottie_robot = load_lottie_url("https://assets7.lottiefiles.com/packages/lf20_touohxv0.json")
 
 # --- Avatar display ---
 with st.container():
